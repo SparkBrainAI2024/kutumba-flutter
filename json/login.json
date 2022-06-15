@@ -1,0 +1,10 @@
+{
+    "status": "1",
+    "message": "Login Successful!!!",
+    "api_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvZGVtby5rdXR1bWJhOC5jb21cL2FwaVwvY3VzdG9tZXJcL2xvZ2luIiwiaWF0IjoxNjE2Mzk3MDg2LCJleHAiOjE2MTY0MDA2ODYsIm5iZiI6MTYxNjM5NzA4NiwianRpIjoiY3Npc1d1OEYxbG80WFlCTSIsInN1YiI6ODAsInBydiI6ImRmZWNiMzFmOTExZmYyNTQyNzU5MWI2ZjQ3YWQzOGE5NTE2OWM0ZWMiLCJlbWFpbCI6ImJwcmFqd29sQGdtYWlsLmNvbSIsInBhc3N3b3JkIjoiJDJ5JDEwJEZNRmUwVWkwOFZiUVQ0SVwvMzdxLmtlNDdYRE93VE1uS3UuYzZpZE5SZTlaVWJzNVJlNThSdSJ9.o1iL2wZCqMuf_HlXBJ5yWSXuJakk_NuCa1-o4Q_Skzs",
+    "response": {
+        "username": "bprajwol@gmail.com",
+        "email": "bprajwol@gmail.com",
+        "session_id": "568"
+    }
+}

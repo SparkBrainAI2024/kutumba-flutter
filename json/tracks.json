@@ -1,0 +1,114 @@
+{
+    "status": "1",
+    "message": "Data Found!!!",
+    "response": [
+        {
+            "id": 19,
+            "title": "Divinity",
+            "album_id": "4",
+            "genre": null,
+            "order": "1",
+            "description": null,
+            "music_file": "1600678358.mp3",
+            "created_at": "2020-09-21 08:52:48",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 18,
+            "title": "Arbazo",
+            "album_id": "4",
+            "genre": null,
+            "order": "2",
+            "description": null,
+            "music_file": "1600678307.mp3",
+            "created_at": "2020-09-21 08:51:59",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 20,
+            "title": "Freedom",
+            "album_id": "4",
+            "genre": null,
+            "order": "3",
+            "description": null,
+            "music_file": "1600678414.mp3",
+            "created_at": "2020-09-21 08:53:47",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 21,
+            "title": "Hakar",
+            "album_id": "4",
+            "genre": null,
+            "order": "4",
+            "description": null,
+            "music_file": "1600678460.mp3",
+            "created_at": "2020-09-21 08:54:31",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 22,
+            "title": "Ketaketi",
+            "album_id": "4",
+            "genre": null,
+            "order": "5",
+            "description": null,
+            "music_file": "1600678520.mp3",
+            "created_at": "2020-09-21 08:55:26",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 23,
+            "title": "Pariwartan",
+            "album_id": "4",
+            "genre": null,
+            "order": "6",
+            "description": null,
+            "music_file": "1600678553.mp3",
+            "created_at": "2020-09-21 08:56:04",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 24,
+            "title": "Soaltenee",
+            "album_id": "4",
+            "genre": null,
+            "order": "7",
+            "description": null,
+            "music_file": "1600678893.mp3",
+            "created_at": "2020-09-21 09:01:45",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 25,
+            "title": "Utpatti",
+            "album_id": "4",
+            "genre": null,
+            "order": "8",
+            "description": null,
+            "music_file": "1600678984.mp3",
+            "created_at": "2020-09-21 09:03:08",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        },
+        {
+            "id": 26,
+            "title": "Yatra",
+            "album_id": "4",
+            "genre": null,
+            "order": "9",
+            "description": null,
+            "music_file": "1600679028.mp3",
+            "created_at": "2020-09-21 09:03:58",
+            "updated_at": "2020-09-22 14:42:04",
+            "deleted_at": null
+        }
+    ]
+}

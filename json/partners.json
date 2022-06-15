@@ -1,0 +1,56 @@
+{
+    "status": "1",
+    "message": "Data Found!!!",
+    "response": [
+        {
+            "id": 1,
+            "title": "Teach for Nepal",
+            "image_file": "uploads/partner/photo/1608449206.png",
+            "link": "https://www.teachfornepal.org/",
+            "order": "0",
+            "status": "1",
+            "created_at": null,
+            "updated_at": "2020-12-20 07:43:34"
+        },
+        {
+            "id": 2,
+            "title": "International Sound Service (ISS)",
+            "image_file": "uploads/partner/photo/1608542448.png",
+            "link": "https://www.isssoundz.com/",
+            "order": "0",
+            "status": "1",
+            "created_at": null,
+            "updated_at": "2020-12-21 09:20:48"
+        },
+        {
+            "id": 3,
+            "title": "Facts Nepal",
+            "image_file": "uploads/partner/photo/1608542748.png",
+            "link": "http://www.factsnepal.com",
+            "order": "0",
+            "status": "1",
+            "created_at": null,
+            "updated_at": null
+        },
+        {
+            "id": 4,
+            "title": "Easy Healthcare 101",
+            "image_file": "uploads/partner/photo/1608543472.png",
+            "link": "https://www.easyhealthcare101.com",
+            "order": "0",
+            "status": "1",
+            "created_at": null,
+            "updated_at": null
+        },
+        {
+            "id": 5,
+            "title": "Samriddhi Foundation",
+            "image_file": "uploads/partner/photo/1608543795.png",
+            "link": "http://www.samriddhi.org",
+            "order": "0",
+            "status": "1",
+            "created_at": null,
+            "updated_at": null
+        }
+    ]
+}
