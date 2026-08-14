@@ -25,30 +25,30 @@ class PushNotificationsManager {
       FirebaseMessaging.onBackgroundMessage(
           _firebaseMessagingBackgroundHandler);
 
-      _firebaseMessaging.getInitialMessage().then((RemoteMessage message) {
+      _firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
         if (message != null) {
           print('onmessage');
 
           print(message);
-          RemoteNotification notification = message.notification;
-          showNotification(notification);
+          RemoteNotification? notification = message.notification;
+          showNotification(notification!);
         }
       });
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
         print('Got a message whilst in the foreground!');
         print('Message data: ${message.data}');
-        RemoteNotification notification = message.notification;
-        showNotification(notification);
+        RemoteNotification? notification = message.notification;
+        showNotification(notification!);
       });
 
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         print('A new onMessageOpenedApp event was published!');
-        RemoteNotification notification = message.notification;
-        showNotification(notification);
+        RemoteNotification? notification = message.notification;
+        showNotification(notification!);
       });
 
-      String token = await _firebaseMessaging.getToken();
+      String? token = await _firebaseMessaging.getToken();
       print("FirebaseMessaging token: $token");
 
       _initialized = true;
@@ -58,13 +58,13 @@ class PushNotificationsManager {
   showNotification(RemoteNotification notification) {
     showOverlay((context, t) {
       return AlertDialog(
-        title: Text(notification.title),
+        title: Text(notification.title ?? ""),
         content: notification.body == null
             ? null
             : SingleChildScrollView(
                 child: ListBody(
                   children: [
-                    Text(notification.body),
+                    Text(notification.body ?? ""),
                   ],
                 ),
               ),
@@ -72,7 +72,7 @@ class PushNotificationsManager {
           TextButton(
             child: const Text('Close'),
             onPressed: () {
-              OverlaySupportEntry.of(context).dismiss();
+              OverlaySupportEntry.of(context)?.dismiss();
             },
           ),
         ],
@@ -81,6 +81,6 @@ class PushNotificationsManager {
   }
 
   Future<String> getToken() async {
-    return await _firebaseMessaging.getToken();
+    return await _firebaseMessaging.getToken() ?? "";
   }
 }

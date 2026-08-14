@@ -7,7 +7,7 @@ import 'package:kutumba/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
 class Wrapper extends StatefulWidget {
-  const Wrapper({Key key}) : super(key: key);
+  const Wrapper({Key? key}) : super(key: key);
 
   @override
   _WrapperState createState() => _WrapperState();
@@ -15,7 +15,7 @@ class Wrapper extends StatefulWidget {
 
 class _WrapperState extends State<Wrapper> {
   void autoLogin() async {
-    User user = await AuthProvider().autoLogin();
+    User? user = await AuthProvider().autoLogin();
     Provider.of<UserProvider>(context, listen: false).setUser(user);
   }
 

@@ -1,624 +1,698 @@
-import 'dart:async';
-
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:kutumba/components/audio_service/audio_handler.dart';
 import 'package:kutumba/components/audio_service/seekbar.dart';
-import 'package:kutumba/components/alert.dart';
 import 'package:kutumba/components/header_logo.dart';
 import 'package:kutumba/components/loader.dart';
 import 'package:kutumba/models/album.dart';
 import 'package:kutumba/models/track.dart';
-import 'package:kutumba/pages/payment.dart';
 import 'package:kutumba/services/api.dart';
 import 'package:kutumba/services/service_locator.dart';
-import 'package:kutumba/utils/refresh_token.dart';
-import 'package:kutumba/utils/user_preferences.dart';
 import 'package:kutumba/utils/app_url.dart';
+
+import '../utils/user_preferences.dart';
 
 class Playlist extends StatefulWidget {
   final Album album;
-  Playlist(this.album);
+
+  const Playlist(
+    this.album, {
+    super.key,
+  });
 
   @override
-  _PlaylistState createState() => _PlaylistState();
+  State<Playlist> createState() => _PlaylistState();
 }
 
 class _PlaylistState extends State<Playlist> {
-  Album album;
-  bool loading = true;
-  final ApiService _api = ApiService();
-  ScrollController controller = ScrollController();
+  late Album album;
 
-  final _audioHandler = getIt<AudioHandler>();
+  bool loading = true;
+
+  final ApiService _api = ApiService();
+
+  late String? token = '';
+
+  final ScrollController controller = ScrollController();
+
+  final AudioHandler _audioHandler = getIt<AudioHandler>();
 
   @override
   void initState() {
     super.initState();
-
     init();
   }
 
-  init() async {
-    for (var mediaItem in _audioHandler.queue.value) {
-      _audioHandler.removeQueueItem(mediaItem);
-    }
+  Future<void> init() async {
+    try {
+      token = await UserPreferences().getToken();
 
-    album = widget.album;
+      // Clear existing queue.
+      final List<MediaItem> existingQueue = List<MediaItem>.from(
+        _audioHandler.queue.value,
+      );
 
-    album.track = [];
-    Map jsonResult = await _api.fetchTracks(album.id);
+      for (final MediaItem mediaItem in existingQueue) {
+        await _audioHandler.removeQueueItem(
+          mediaItem,
+        );
+      }
 
-    if (jsonResult['status']) {
-      album.track = jsonResult['data'];
-    } else {
-      // if (jsonResult['statusCode'] != null &&
-      //     (jsonResult['statusCode'] == 402 ||
-      //         jsonResult['statusCode'] == 401)) {
-      //   Map refreshResponse = await RefreshToken.refresh(context);
-      //   if (refreshResponse != null) {
-      //     init();
-      //   }
-      //   return;
-      // } else if (jsonResult['statusCode'] != null &&
-      //     (jsonResult['statusCode'] == 409)) {
-      //   await RefreshToken.logout(context, jsonResult['message']);
-      //   return;
-      // } else if (jsonResult['statusCode'] != null &&
-      //     jsonResult['statusCode'] == 403) {
-      //   Navigator.of(context).pushReplacement(MaterialPageRoute(
-      //       builder: (context) => Payment('renew', hasBackBtn: true)));
-      //   return;
-      // }
+      album = widget.album;
 
-      // Alert.errorSnackbar(context, jsonResult['message']);
-      // return;
-    }
+      album.track = <Track>[];
 
-    // String token = await UserPreferences().getToken();
+      final Map<String, dynamic> jsonResult = await _api.fetchTracks(album.id);
 
-    // final mediaItems = album.track
-    //     .map((track) => MediaItem(
-    //         id: track.id.toString(),
-    //         album: album.name,
-    //         title: track.title,
-    //         extras: {"url": track.musicUrl + "?token=" + token}))
-    //     .toList();
-    // _audioHandler.addQueueItems(mediaItems);
+      if (jsonResult['status'] == true) {
+        final dynamic tracks = jsonResult['data'];
 
-    //// For testing only
-    album.track = List.generate(
-        10,
-        (index) => Track.fromJson({
-              'id': (index+1),
-              'title': 'Song ${index+1}',
-              'album_id': album.id.toString(),
-              'music_url':
-                  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${index+1}.mp3',
-            }));
+        if (tracks is List) {
+          album.track = tracks
+              .map<Track>(
+                (dynamic item) => item is Track
+                    ? item
+                    : Track.fromJson(
+                        Map<String, dynamic>.from(item),
+                      ),
+              )
+              .toList();
+        }
+      } else {
+        if (!mounted) {
+          return;
+        }
 
-    final mediaItems = album.track
-        .map((track) => MediaItem(
+        // Keep the same behavior as your original code.
+        // You can display an API error here if required.
+      }
+
+      // ------------------------------------------------
+      // TEST DATA
+      // Remove this section when using real API tracks.
+      // ------------------------------------------------
+      // album.track = List<Track>.generate(
+      //   10,
+      //   (int index) {
+      //     final int songNumber = index + 1;
+      //
+      //     return Track.fromJson({
+      //       'id': songNumber,
+      //       'title': 'Song $songNumber',
+      //       'album_id': album.id.toString(),
+      //       'music_url': 'https://www.soundhelix.com/examples/mp3/'
+      //           'SoundHelix-Song-$songNumber.mp3',
+      //     });
+      //   },
+      // );
+
+      // ------------------------------------------------
+      // Add tracks to audio queue.
+      // ------------------------------------------------
+      final List<MediaItem> mediaItems = album.track.map(
+        (Track track) {
+          return MediaItem(
             id: track.id.toString(),
             album: album.name,
             title: track.title,
-            extras: {"url": track.musicUrl}))
-        .toList();
-    _audioHandler.addQueueItems(mediaItems);
-    ////
+            extras: <String, dynamic>{
+              'url': track.musicUrl,
+              'apikey': token,
+            },
+          );
+        },
+      ).toList();
 
-    setState(() {
-      loading = false;
-    });
+      await _audioHandler.addQueueItems(
+        mediaItems,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        loading = false;
+      });
+    } catch (e, stackTrace) {
+      debugPrint(
+        'Playlist initialization error: $e',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  Future<bool> _handleBackNavigation() async {
+    await _audioHandler.stop();
+    return true;
   }
 
   @override
   void dispose() {
-    // if (_audioHandler != null) {
-    //   _audioHandler.customAction('dispose');
-    // }
-
-    // controller?.dispose();
+    controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return loading
-        ? const Loader()
-        : Scaffold(
-            backgroundColor: Colors.black12,
-            // endDrawer: MainDrawer(),
-            appBar: AppBar(
-              backgroundColor: Colors.black12,
-              title: const HeaderLogo(),
-              centerTitle: false,
+    if (loading) {
+      return const Loader();
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black12,
+      appBar: AppBar(
+        backgroundColor: Colors.black12,
+        title: const HeaderLogo(),
+        centerTitle: false,
+      ),
+      body: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (bool didPop, dynamic result) async {
+          if (didPop) {
+            return;
+          }
+
+          final bool shouldPop = await _handleBackNavigation();
+
+          if (shouldPop && context.mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: SingleChildScrollView(
+          controller: controller,
+          child: Column(
+            children: [
+              _buildAlbumInformation(),
+              _buildAudioPlayer(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlbumInformation() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              image: DecorationImage(
+                image: NetworkImage(
+                  AppUrl.baseURL + (album.coverPhoto ?? ''),
+                ),
+                fit: BoxFit.cover,
+              ),
             ),
-            body: WillPopScope(
-              onWillPop: () {
-                _audioHandler.stop();
-                return Future.value(true);
-              },
-              child: SingleChildScrollView(
-                controller: controller,
-                child: Column(
-                  children: [
-                    Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(5),
-                                  image: DecorationImage(
-                                    image: NetworkImage(
-                                        AppUrl.baseURL + album.coverPhoto),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  const SizedBox(height: 15),
-                                  Text(album.name,
-                                      style: const TextStyle(
-                                          color: Color.fromARGB(
-                                              255, 175, 175, 175),
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 1)),
-                                  const SizedBox(height: 15),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      const Expanded(
-                                        flex: 2,
-                                        child: Text('Artist:',
-                                            style: TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(album.artist,
-                                            style: const TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      const Expanded(
-                                        flex: 2,
-                                        child: Text('Release Date:',
-                                            style: TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(album.releaseDate,
-                                            style: const TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      const Expanded(
-                                        flex: 2,
-                                        child: Text('Label:',
-                                            style: TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(album.label,
-                                            style: const TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                            album.track.length.toString() +
-                                                ' tracks',
-                                            style: const TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(album.totalTime,
-                                            style: const TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 175, 175, 175),
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: 1)),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                ],
-                              ),
-                            ])),
-                    Center(
-                      child: StreamBuilder<PlaybackState>(
-                        stream: _audioHandler.playbackState,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState !=
-                              ConnectionState.active) {
-                            // Don't show anything until we've ascertained whether or not the
-                            // service is running, since we want to show a different UI in
-                            // each case.
-                            return const SizedBox();
-                          }
-                          // final running = snapshot.data ?? false;
-                          return Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // if (!running) ...[
-                              //   // UI to show when we're not running, i.e. a menu.
-                              //   audioPlayerButton(),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            album.name ?? '',
+            style: const TextStyle(
+              color: Color.fromARGB(
+                255,
+                175,
+                175,
+                175,
+              ),
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 15),
+          _buildAlbumRow(
+            'Artist:',
+            album.artist ?? '',
+          ),
+          const SizedBox(height: 10),
+          _buildAlbumRow(
+            'Release Date:',
+            album.releaseDate ?? '',
+          ),
+          const SizedBox(height: 10),
+          _buildAlbumRow(
+            'Label:',
+            album.label ?? '',
+          ),
+          const SizedBox(height: 10),
+          _buildAlbumRow(
+            'Tracks:',
+            '${album.track.length} tracks',
+            secondFlex: 3,
+          ),
+          const SizedBox(height: 10),
+          _buildAlbumRow(
+            'Duration:',
+            album.totalTime ?? '',
+          ),
+        ],
+      ),
+    );
+  }
 
-                              // ] else ...[
-                              // UI to show when we're running, i.e. player state/controls.
-
-                              // Queue display/controls.
-                              StreamBuilder<MediaItem>(
-                                stream: _audioHandler.mediaItem,
-                                builder: (context, snapshot) {
-                                  final mediaItem = snapshot.data;
-                                  final queue = _audioHandler.queue.value;
-                                  return Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (queue != null && queue.isNotEmpty)
-                                        Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            children: [
-                                              //Cover Photo
-                                              Expanded(
-                                                flex: 1,
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(8.0),
-                                                  child: Center(
-                                                      child: Image.network(
-                                                    AppUrl.baseURL +
-                                                        album.coverPhoto,
-                                                    height: 100,
-                                                    width: 100,
-                                                  )),
-                                                ),
-                                              ),
-                                              Expanded(
-                                                  flex: 2,
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .stretch,
-                                                    children: [
-                                                      // song title
-                                                      Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(8.0),
-                                                        child: Text(
-                                                          mediaItem != null
-                                                              ? (mediaItem
-                                                                      .title ??
-                                                                  "" +
-                                                                      ' - ' +
-                                                                      mediaItem
-                                                                          .artist ??
-                                                                  "")
-                                                              : '',
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize: 17,
-                                                            letterSpacing: 1,
-                                                            color:
-                                                                Color.fromARGB(
-                                                                    255,
-                                                                    175,
-                                                                    175,
-                                                                    175),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          //skip previous button
-                                                          IconButton(
-                                                            icon: const Icon(Icons
-                                                                .skip_previous),
-                                                            color: const Color
-                                                                    .fromARGB(
-                                                                255,
-                                                                175,
-                                                                175,
-                                                                175),
-                                                            iconSize: 42.0,
-                                                            onPressed: mediaItem ==
-                                                                    queue.first
-                                                                ? null
-                                                                : _audioHandler
-                                                                    .skipToPrevious,
-                                                          ),
-                                                          // Play/pause/stop buttons.
-                                                          StreamBuilder<
-                                                              PlaybackState>(
-                                                            stream: _audioHandler
-                                                                .playbackState,
-                                                            // .map((state) => state.playing)
-                                                            // .distinct(),
-                                                            builder: (context,
-                                                                snapshot) {
-                                                              final playerState =
-                                                                  snapshot.data;
-                                                              final processingState =
-                                                                  playerState
-                                                                      ?.processingState;
-                                                              final playing =
-                                                                  playerState
-                                                                          ?.playing ??
-                                                                      false;
-                                                              // final playing = snapshot.data ?? false;
-                                                              if (processingState ==
-                                                                      AudioProcessingState
-                                                                          .loading ||
-                                                                  processingState ==
-                                                                      AudioProcessingState
-                                                                          .buffering) {
-                                                                return Container(
-                                                                  margin:
-                                                                      const EdgeInsets
-                                                                              .all(
-                                                                          8.0),
-                                                                  width: 42.0,
-                                                                  height: 42.0,
-                                                                  child:
-                                                                      const CircularProgressIndicator(),
-                                                                );
-                                                              } else {
-                                                                return Row(
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .center,
-                                                                  children: [
-                                                                    if (playing)
-                                                                      pauseButton()
-                                                                    else
-                                                                      playButton(),
-                                                                    // stopButton(),
-                                                                  ],
-                                                                );
-                                                              }
-                                                            },
-                                                          ),
-                                                          //skip next button
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                                Icons
-                                                                    .skip_next),
-                                                            color: const Color
-                                                                    .fromARGB(
-                                                                255,
-                                                                175,
-                                                                175,
-                                                                175),
-                                                            iconSize: 42.0,
-                                                            onPressed: mediaItem ==
-                                                                    queue.last
-                                                                ? null
-                                                                : _audioHandler
-                                                                    .skipToNext,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ))
-                                            ]),
-                                    ],
-                                  );
-                                },
-                              ),
-
-                              // A seek bar.
-                              StreamBuilder<MediaItem>(
-                                stream: _audioHandler.mediaItem,
-                                builder: (context, snapshot) {
-                                  final mediaItem = snapshot.data;
-                                  if (mediaItem != null) {
-                                    return StreamBuilder<Duration>(
-                                        stream: AudioService.position,
-                                        builder: (context, snapshot) {
-                                          final currentPosition = snapshot.data;
-                                          return SeekBar(
-                                            duration: mediaItem.duration ??
-                                                Duration.zero,
-                                            position: currentPosition ??
-                                                Duration.zero,
-                                            onChangeEnd: (newPosition) {
-                                              _audioHandler.seek(newPosition);
-                                            },
-                                          );
-                                        });
-                                  } else {
-                                    return Container();
-                                  }
-                                },
-                              ),
-
-                              Container(
-                                padding:
-                                    const EdgeInsets.fromLTRB(0, 10, 0, 10),
-                                height:
-                                    MediaQuery.of(context).size.height * 0.5,
-                                child: StreamBuilder<List<MediaItem>>(
-                                  stream: _audioHandler.queue,
-                                  builder: (context, snapshot) {
-                                    final queue = snapshot.data;
-                                    final mediaItem =
-                                        _audioHandler.mediaItem.value;
-                                    return NotificationListener<
-                                        OverscrollNotification>(
-                                      onNotification:
-                                          (OverscrollNotification value) {
-                                        if (value.overscroll < 0 &&
-                                            controller.offset +
-                                                    value.overscroll <=
-                                                0) {
-                                          if (controller.offset != 0) {
-                                            controller.jumpTo(0);
-                                          }
-                                          return true;
-                                        }
-                                        if (controller.offset +
-                                                value.overscroll >=
-                                            controller
-                                                .position.maxScrollExtent) {
-                                          if (controller.offset !=
-                                              controller
-                                                  .position.maxScrollExtent) {
-                                            controller.jumpTo(controller
-                                                .position.maxScrollExtent);
-                                          }
-                                          return true;
-                                        }
-                                        controller.jumpTo(controller.offset +
-                                            value.overscroll);
-                                        return true;
-                                      },
-                                      child: ListView(
-                                        children: [
-                                          if (queue != null && queue.isNotEmpty)
-                                            for (var i = 0;
-                                                i < queue.length;
-                                                i++)
-                                              Container(
-                                                key: ValueKey(queue[i]),
-                                                child: Material(
-                                                  color: (mediaItem != null &&
-                                                          mediaItem.id ==
-                                                              queue[i].id)
-                                                      ? Theme.of(context)
-                                                          .primaryColor
-                                                      : Colors.black12,
-                                                  child: ListTile(
-                                                    title: Text(queue[i].title,
-                                                        style: TextStyle(
-                                                          color: (mediaItem !=
-                                                                      null &&
-                                                                  mediaItem
-                                                                          .id ==
-                                                                      queue[i]
-                                                                          .id)
-                                                              ? Colors.black
-                                                              : const Color
-                                                                      .fromARGB(
-                                                                  255,
-                                                                  175,
-                                                                  175,
-                                                                  175),
-                                                        )),
-                                                    onTap: () {
-                                                      _audioHandler
-                                                          .skipToQueueItem(i);
-                                                      // AudioService.customAction(
-                                                      //     'updateMedia',
-                                                      //     queue[i].id);
-                                                    },
-                                                  ),
-                                                ),
-                                              ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-
-                              // ],
-                            ],
-                          );
-                        },
-                      ),
+  Widget _buildAlbumRow(
+    String label,
+    String value, {
+    int secondFlex = 3,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Expanded(
+          flex: 2,
+          child: SizedBox(),
+        ),
+        Expanded(
+          flex: secondFlex,
+          child: Row(
+            children: [
+              SizedBox(
+                width: 100,
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color.fromARGB(
+                      255,
+                      175,
+                      175,
+                      175,
                     ),
-                  ],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    color: Color.fromARGB(
+                      255,
+                      175,
+                      175,
+                      175,
+                    ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAudioPlayer() {
+    return Center(
+      child: StreamBuilder<PlaybackState>(
+        stream: _audioHandler.playbackState,
+        builder: (
+          BuildContext context,
+          AsyncSnapshot<PlaybackState> snapshot,
+        ) {
+          if (snapshot.connectionState != ConnectionState.active) {
+            return const SizedBox();
+          }
+
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildCurrentTrack(),
+              _buildSeekBar(),
+              _buildQueue(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCurrentTrack() {
+    return StreamBuilder<MediaItem?>(
+      stream: _audioHandler.mediaItem,
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<MediaItem?> snapshot,
+      ) {
+        final MediaItem? mediaItem = snapshot.data;
+
+        final List<MediaItem> queue = _audioHandler.queue.value;
+
+        if (queue.isEmpty) {
+          return const SizedBox();
+        }
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Center(
+                  child: Image.network(
+                    AppUrl.baseURL + (album.coverPhoto ?? ''),
+                    height: 100,
+                    width: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (
+                      BuildContext context,
+                      Object error,
+                      StackTrace? stackTrace,
+                    ) {
+                      return const SizedBox(
+                        height: 100,
+                        width: 100,
+                        child: Icon(
+                          Icons.music_note,
+                          size: 50,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-          );
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      _getTrackTitle(mediaItem),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        letterSpacing: 1,
+                        color: Color.fromARGB(
+                          255,
+                          175,
+                          175,
+                          175,
+                        ),
+                      ),
+                    ),
+                  ),
+                  _buildPlaybackControls(
+                    mediaItem,
+                    queue,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  ElevatedButton startButton(String label, VoidCallback onPressed) =>
-      ElevatedButton(
-        child: Text(label),
-        onPressed: onPressed,
-      );
+  String _getTrackTitle(
+    MediaItem? mediaItem,
+  ) {
+    if (mediaItem == null) {
+      return '';
+    }
 
-  IconButton playButton() => IconButton(
-        icon: const Icon(Icons.play_arrow),
-        color: const Color.fromARGB(255, 175, 175, 175),
-        iconSize: 42.0,
-        onPressed: _audioHandler.play,
-      );
+    final String title = mediaItem.title.trim();
 
-  IconButton pauseButton() => IconButton(
-        icon: const Icon(Icons.pause),
-        color: const Color.fromARGB(255, 175, 175, 175),
-        iconSize: 42.0,
-        onPressed: _audioHandler.pause,
-      );
+    final String artist = (mediaItem.artist ?? '').trim();
 
-  IconButton stopButton() => IconButton(
-        icon: const Icon(Icons.stop),
-        iconSize: 64.0,
-        onPressed: _audioHandler.stop,
-      );
+    if (artist.isEmpty) {
+      return title;
+    }
+
+    return '$title - $artist';
+  }
+
+  Widget _buildPlaybackControls(
+    MediaItem? mediaItem,
+    List<MediaItem> queue,
+  ) {
+    final bool isFirst =
+        mediaItem == null || queue.isEmpty || mediaItem.id == queue.first.id;
+
+    final bool isLast =
+        mediaItem == null || queue.isEmpty || mediaItem.id == queue.last.id;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        IconButton(
+          icon: const Icon(
+            Icons.skip_previous,
+          ),
+          color: const Color.fromARGB(
+            255,
+            175,
+            175,
+            175,
+          ),
+          iconSize: 42,
+          onPressed: isFirst
+              ? null
+              : () {
+                  _audioHandler.skipToPrevious();
+                },
+        ),
+        StreamBuilder<PlaybackState>(
+          stream: _audioHandler.playbackState,
+          builder: (
+            BuildContext context,
+            AsyncSnapshot<PlaybackState> snapshot,
+          ) {
+            final PlaybackState? state = snapshot.data;
+
+            final AudioProcessingState? processingState =
+                state?.processingState;
+
+            final bool playing = state?.playing ?? false;
+
+            if (processingState == AudioProcessingState.loading ||
+                processingState == AudioProcessingState.buffering) {
+              return Container(
+                margin: const EdgeInsets.all(8),
+                width: 42,
+                height: 42,
+                child: const CircularProgressIndicator(),
+              );
+            }
+
+            if (playing) {
+              return pauseButton();
+            }
+
+            return playButton();
+          },
+        ),
+        IconButton(
+          icon: const Icon(
+            Icons.skip_next,
+          ),
+          color: const Color.fromARGB(
+            255,
+            175,
+            175,
+            175,
+          ),
+          iconSize: 42,
+          onPressed: isLast
+              ? null
+              : () {
+                  _audioHandler.skipToNext();
+                },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSeekBar() {
+    return StreamBuilder<MediaItem?>(
+      stream: _audioHandler.mediaItem,
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<MediaItem?> snapshot,
+      ) {
+        final MediaItem? mediaItem = snapshot.data;
+
+        if (mediaItem == null) {
+          return const SizedBox();
+        }
+
+        return StreamBuilder<Duration>(
+          stream: AudioService.position,
+          builder: (
+            BuildContext context,
+            AsyncSnapshot<Duration> snapshot,
+          ) {
+            final Duration position = snapshot.data ?? Duration.zero;
+
+            final Duration duration = mediaItem.duration ?? Duration.zero;
+
+            final Duration safePosition =
+                position > duration ? duration : position;
+
+            return SeekBar(
+              duration: duration,
+              position: safePosition,
+              onChangeEnd: (Duration newPosition) {
+                _audioHandler.seek(
+                  newPosition,
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildQueue() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        vertical: 10,
+      ),
+      height: MediaQuery.of(context).size.height * 0.5,
+      child: StreamBuilder<List<MediaItem>>(
+        stream: _audioHandler.queue,
+        builder: (
+          BuildContext context,
+          AsyncSnapshot<List<MediaItem>> snapshot,
+        ) {
+          final List<MediaItem> queue = snapshot.data ?? <MediaItem>[];
+
+          final MediaItem? mediaItem = _audioHandler.mediaItem.value;
+
+          if (queue.isEmpty) {
+            return const Center(
+              child: Text(
+                'No tracks available',
+                style: TextStyle(
+                  color: Color.fromARGB(
+                    255,
+                    175,
+                    175,
+                    175,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            controller: ScrollController(),
+            itemCount: queue.length,
+            itemBuilder: (
+              BuildContext context,
+              int index,
+            ) {
+              final MediaItem item = queue[index];
+
+              final bool isCurrent =
+                  mediaItem != null && mediaItem.id == item.id;
+
+              return Material(
+                color:
+                    isCurrent ? Theme.of(context).primaryColor : Colors.black12,
+                child: ListTile(
+                  key: ValueKey(item.id),
+                  title: Text(
+                    item.title,
+                    style: TextStyle(
+                      color: isCurrent
+                          ? Colors.black
+                          : const Color.fromARGB(
+                              255,
+                              175,
+                              175,
+                              175,
+                            ),
+                    ),
+                  ),
+                  trailing: isCurrent
+                      ? const Icon(
+                          Icons.equalizer,
+                          color: Colors.black,
+                        )
+                      : null,
+                  onTap: () {
+                    _audioHandler.skipToQueueItem(
+                      index,
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  IconButton playButton() {
+    return IconButton(
+      icon: const Icon(
+        Icons.play_arrow,
+      ),
+      color: const Color.fromARGB(
+        255,
+        175,
+        175,
+        175,
+      ),
+      iconSize: 42,
+      onPressed: () {
+        _audioHandler.play();
+      },
+    );
+  }
+
+  IconButton pauseButton() {
+    return IconButton(
+      icon: const Icon(
+        Icons.pause,
+      ),
+      color: const Color.fromARGB(
+        255,
+        175,
+        175,
+        175,
+      ),
+      iconSize: 42,
+      onPressed: () {
+        _audioHandler.pause();
+      },
+    );
+  }
+
+  IconButton stopButton() {
+    return IconButton(
+      icon: const Icon(
+        Icons.stop,
+      ),
+      iconSize: 64,
+      onPressed: () {
+        _audioHandler.stop();
+      },
+    );
+  }
 }

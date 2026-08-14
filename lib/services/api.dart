@@ -30,14 +30,14 @@ class ApiService {
 
   Future fetchAlbums() async {
     List<Album> albums = [];
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     try {
       var url = Uri.parse(AppUrl.albumList);
       Response response = await get(url, headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + token!
       });
 
       final Map jsonResult = json.decode(response.body);
@@ -66,7 +66,7 @@ class ApiService {
 
   Future fetchTracks(int albumId) async {
     List<Track> tracks = [];
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
 
@@ -75,7 +75,7 @@ class ApiService {
     return await get(url, headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ' + token
+      'Authorization': 'Bearer ' + token!
     }).then((Response response) async {
       final Map<String, dynamic> responseData = json.decode(response.body);
 
@@ -101,7 +101,7 @@ class ApiService {
 
   Future fetchVideos() async {
     List<Video> videos = [];
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.videoList);
@@ -109,7 +109,7 @@ class ApiService {
     return await get(url, headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ' + token
+      'Authorization': 'Bearer ' + token!
     }).then((Response response) async {
       final Map<String, dynamic> responseData = json.decode(response.body);
 
@@ -135,7 +135,7 @@ class ApiService {
 
   Future fetchVideoComments(int videoId) async {
     List<VideoComment> comments = [];
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.videoCommentList);
@@ -149,7 +149,7 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + token!
       },
       body: json.encode(data),
     ).then((Response response) async {
@@ -181,12 +181,12 @@ class ApiService {
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.partnerList);
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     return await get(url, headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ' + token
+      'Authorization': 'Bearer ' + token!
     }).then((Response response) async {
       final Map<String, dynamic> responseData = json.decode(response.body);
 
@@ -213,7 +213,7 @@ class ApiService {
   Future fetchNotes() async {
     List<Note> notes = [];
 
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.noteList);
@@ -221,7 +221,7 @@ class ApiService {
     return await get(url, headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ' + token
+      'Authorization': 'Bearer ' + token!
     }).then((Response response) async {
       final Map<String, dynamic> responseData = json.decode(response.body);
 

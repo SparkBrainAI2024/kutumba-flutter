@@ -1,32 +1,47 @@
 class Video {
-  int id;
-  String title;
-  String description;
-  String videoFile;
-  String thumbnail;
-  String order;
-  String createdAt;
-  String updatedAt;
+  final int id;
+  final String title;
+  final String description;
+  final String videoFile;
+  final String thumbnail;
+  final String order;
+  final String createdAt;
+  final String updatedAt;
 
-  Video({
-    this.id,
-    this.title,
-    this.description,
-    this.videoFile,
-    this.thumbnail,
-    this.order,
-    this.createdAt,
-    this.updatedAt,
+  const Video({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.videoFile,
+    required this.thumbnail,
+    required this.order,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  Video.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    title = json['title'];
-    description = json['description'] ?? '';
-    videoFile = json['video_file'];
-    thumbnail = json['thumbnail'];
-    order = json['order'];
-    createdAt = json['created_at'];
-    updatedAt = json['updated_at'];
+  factory Video.fromJson(Map<String, dynamic> json) {
+    return Video(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      videoFile: json['video_file'] ?? '',
+      thumbnail: json['thumbnail'] ?? '',
+      order: json['order']?.toString() ?? '',
+      createdAt: json['created_at'] ?? '',
+      updatedAt: json['updated_at'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'video_file': videoFile,
+      'thumbnail': thumbnail,
+      'order': order,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
   }
 }

@@ -1,36 +1,39 @@
 class Artist {
-  String firstName;
-  String name;
-  String photo;
-  String specialization;
-  String about;
-  String sliderText;
+  final String firstName;
+  final String name;
+  final String photo;
+  final String specialization;
+  final String about;
+  final String sliderText;
 
-  Artist(
-      {this.firstName,
-      this.name,
-      this.photo,
-      this.specialization,
-      this.about,
-      this.sliderText});
+  const Artist({
+    required this.firstName,
+    required this.name,
+    required this.photo,
+    required this.specialization,
+    required this.about,
+    required this.sliderText,
+  });
 
-  Artist.fromJson(Map<String, dynamic> json) {
-    firstName = json['first_name'];
-    photo = json['photo'];
-    specialization = json['specialization'];
-    about = json['about'];
-    sliderText = json['slider_text'];
-    name = json['name'];
+  factory Artist.fromJson(Map<String, dynamic> json) {
+    return Artist(
+      firstName: json['first_name'] ?? '',
+      name: json['name'] ?? '',
+      photo: json['photo'] ?? '',
+      specialization: json['specialization'] ?? '',
+      about: json['about'] ?? '',
+      sliderText: json['slider_text'] ?? '',
+    );
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['first_name'] = firstName;
-    data['photo'] = photo;
-    data['specialization'] = specialization;
-    data['about'] = about;
-    data['slider_text'] = sliderText;
-    data['name'] = name;
-    return data;
+    return {
+      'first_name': firstName,
+      'name': name,
+      'photo': photo,
+      'specialization': specialization,
+      'about': about,
+      'slider_text': sliderText,
+    };
   }
 }

@@ -8,7 +8,7 @@ import 'package:kutumba/utils/user_preferences.dart';
 
 class UserService {
   Future checkPaymentStatus() async {
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.checkPaymentStatus);
@@ -16,7 +16,7 @@ class UserService {
     return await get(url, headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ' + token
+      'Authorization': 'Bearer ' + token!
     }).then((Response response) async {
       final Map<String, dynamic> responseData = json.decode(response.body);
 
@@ -40,7 +40,13 @@ class UserService {
 
   Future fetchProfile() async {
     User user;
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
+    if (token == null) {
+      return {
+        'status': false,
+        'message': 'Token not found',
+      };
+    }
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.profile);
@@ -48,7 +54,7 @@ class UserService {
     return await get(url, headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ' + token
+      'Authorization': 'Bearer ' + token!
     }).then((Response response) async {
       final Map<String, dynamic> responseData = json.decode(response.body);
 
@@ -72,7 +78,7 @@ class UserService {
   }
 
   Future editProfile(String name, String address) async {
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.editProfile);
@@ -87,7 +93,7 @@ class UserService {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + token!
       },
       body: json.encode(data),
     ).then((Response response) async {
@@ -113,7 +119,7 @@ class UserService {
   }
 
   Future changePassword(String prevPsw, String newPsw) async {
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.changePassword);
@@ -128,7 +134,7 @@ class UserService {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + token!
       },
       body: json.encode(data),
     ).then((Response response) async {
@@ -152,7 +158,7 @@ class UserService {
   }
 
   Future addCommentInVideo(int videoId, String comment) async {
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.videoComment);
@@ -167,7 +173,7 @@ class UserService {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + token!
       },
       body: json.encode(data),
     ).then((Response response) async {

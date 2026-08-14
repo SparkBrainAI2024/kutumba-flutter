@@ -1,68 +1,123 @@
+import 'dart:convert';
+
 import 'package:kutumba/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:async';
 
 class UserPreferences {
-  Future saveUser(User user) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+  static const String _userKey = 'user';
 
-    await prefs.setString("userId", user.userId);
-    await prefs.setString("username", user.username);
-    await prefs.setString("email", user.email);
-    await prefs.setString("token", user.token);
-    // await prefs.setString("expiresAt", user.expiresAt);
+  // ---------------------------------------------------------------------------
+  // SAVE USER
+  // ---------------------------------------------------------------------------
+
+  Future<void> saveUser(User user) async {
+    final SharedPreferences prefs =
+    await SharedPreferences.getInstance();
+
+    await prefs.setString(
+      _userKey,
+      jsonEncode(user.toJson()),
+    );
   }
 
-  Future saveData(String key, String value) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+  // ---------------------------------------------------------------------------
+  // SAVE INDIVIDUAL DATA
+  // ---------------------------------------------------------------------------
+
+  Future<void> saveData(String key, String value) async {
+    final SharedPreferences prefs =
+    await SharedPreferences.getInstance();
 
     await prefs.setString(key, value);
   }
 
-  Future<User> getUser() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+  // ---------------------------------------------------------------------------
+  // GET USER
+  // ---------------------------------------------------------------------------
 
-    String userId = prefs.getString("userId");
-    String name = prefs.getString("username");
-    String email = prefs.getString("email");
-    String token = prefs.getString("token");
-    String expiresAt = prefs.getString("expiresAt");
+  Future<User?> getUser() async {
+    final SharedPreferences prefs =
+    await SharedPreferences.getInstance();
 
-    if (userId == null) return null;
+    final String? userJson = prefs.getString(_userKey);
 
-    if (expiresAt != null &&
-        DateTime.now().isAfter(DateTime.parse(expiresAt))) {
+    if (userJson == null || userJson.isEmpty) {
       return null;
     }
 
-    return User(
-        userId: userId,
-        username: name,
-        email: email,
-        token: token,
-        expiresAt: expiresAt);
+    try {
+      final Map<String, dynamic> json =
+      jsonDecode(userJson);
+
+      return User.fromJson(json);
+    } catch (e) {
+      // Invalid/corrupted user data.
+      await removeUser();
+      return null;
+    }
   }
 
-  void removeUser() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+  // ---------------------------------------------------------------------------
+  // GET TOKEN
+  // ---------------------------------------------------------------------------
 
-    await prefs.remove("userId");
-    await prefs.remove("username");
-    await prefs.remove("email");
-    await prefs.remove("token");
-    await prefs.remove("expiresAt");
-  }
+  Future<String?> getToken() async {
+    final User? user = await getUser();
 
-  Future<String> getToken() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    String token = prefs.getString("token");
-    String expiresAt = prefs.getString("expiresAt");
-
-    if (expiresAt != null &&
-        DateTime.now().isAfter(DateTime.parse(expiresAt))) {
+    if (user == null) {
       return null;
     }
 
-    return token;
+    if (user.token!.isEmpty) {
+      return null;
+    }
+
+    return user.token;
+  }
+
+  // ---------------------------------------------------------------------------
+  // UPDATE TOKEN
+  // ---------------------------------------------------------------------------
+
+  Future<void> updateToken(String token) async {
+    final User? user = await getUser();
+
+    if (user == null) {
+      return;
+    }
+
+    user.token = token;
+
+    await saveUser(user);
+  }
+
+  // ---------------------------------------------------------------------------
+  // REMOVE USER
+  // ---------------------------------------------------------------------------
+
+  Future<void> removeUser() async {
+    final SharedPreferences prefs =
+    await SharedPreferences.getInstance();
+
+    await prefs.remove(_userKey);
+
+    // Remove old keys as well.
+    await prefs.remove('userId');
+    await prefs.remove('username');
+    await prefs.remove('name');
+    await prefs.remove('address');
+    await prefs.remove('email');
+    await prefs.remove('token');
+    await prefs.remove('expiresAt');
+  }
+
+  // ---------------------------------------------------------------------------
+  // CHECK LOGIN
+  // ---------------------------------------------------------------------------
+
+  Future<bool> isLoggedIn() async {
+    final User? user = await getUser();
+
+    return user != null && user.token!.isNotEmpty;
   }
 }

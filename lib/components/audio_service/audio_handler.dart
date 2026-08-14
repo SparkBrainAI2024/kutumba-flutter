@@ -17,9 +17,11 @@ Future<AudioHandler> initAudioService() async {
 }
 
 class MyAudioHandler extends BaseAudioHandler {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player = AudioPlayer(
+    useProxyForRequestHeaders: false,
+  );
   final ConcatenatingAudioSource _playlist =
-  ConcatenatingAudioSource(children: []);
+      ConcatenatingAudioSource(children: []);
 
   MyAudioHandler() {
     _loadEmptyPlaylist();
@@ -150,13 +152,25 @@ class MyAudioHandler extends BaseAudioHandler {
 
   UriAudioSource _createAudioSource(MediaItem mediaItem) {
     final url = mediaItem.extras?['url'] as String?;
+    final apiKey = mediaItem.extras?['apikey'] as String?;
 
-    if (url == null) {
-      throw Exception("MediaItem extras must contain 'url'");
+    debugPrint('====================================');
+    debugPrint('Creating AudioSource');
+    debugPrint('MediaItem ID: ${mediaItem.id}');
+    debugPrint('Title: ${mediaItem.title}');
+    debugPrint('URL: $url');
+    debugPrint('API Key exists: ${apiKey}');
+    debugPrint('====================================');
+
+    if (url == null || apiKey == null) {
+      throw Exception("MediaItem extras must contain 'url' and accessed");
     }
 
     return AudioSource.uri(
       Uri.parse(url),
+      headers: {
+        'Authorization': "Bearer " + apiKey,
+      },
       tag: mediaItem,
     );
   }
@@ -226,7 +240,8 @@ class MyAudioHandler extends BaseAudioHandler {
   }
 
   @override
-  Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) async {
+  Future<dynamic> customAction(String name,
+      [Map<String, dynamic>? extras]) async {
     if (name == 'dispose') {
       await _player.dispose();
       return super.stop();

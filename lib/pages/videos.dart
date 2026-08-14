@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
-import 'package:kutumba/models/user.dart';
-import 'package:kutumba/pages/payment.dart';
-import 'package:kutumba/services/user_api.dart';
-
 import 'package:kutumba/components/alert.dart';
 import 'package:kutumba/components/loader.dart';
+import 'package:kutumba/models/user.dart';
 import 'package:kutumba/models/video.dart';
+import 'package:kutumba/pages/payment.dart';
 import 'package:kutumba/services/api.dart';
+import 'package:kutumba/services/user_api.dart';
 import 'package:kutumba/utils/app_url.dart';
 import 'package:kutumba/utils/date_formater.dart';
 import 'package:kutumba/utils/refresh_token.dart';
 
-import './../main_drawer.dart';
 import './../components/header_logo.dart';
+import './../main_drawer.dart';
 
 class Videos extends StatefulWidget {
-  const Videos({Key key}) : super(key: key);
+  const Videos({Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -29,7 +28,7 @@ class _Videos extends State<Videos> {
   final ApiService _api = ApiService();
   List<Video> videos = [];
 
-  User user;
+  late User user;
   bool allowAccess = false;
   String subscriptionType = 'subscription';
 
@@ -44,10 +43,10 @@ class _Videos extends State<Videos> {
       //   return;
       // }
 
-      allowAccess = user.subscribed && !user.expired;
+      allowAccess = user.subscribed && !user.expired!;
       subscriptionType = user.subscribed ? 'renew' : 'subscription';
 
-      if (!user.subscribed || user.expired) {
+      if (!user.subscribed || user.expired!) {
         Navigator.of(context).pushReplacement(MaterialPageRoute(
             builder: (context) =>
                 Payment(subscriptionType, redirectPage: '/videos')));
@@ -117,9 +116,10 @@ class _Videos extends State<Videos> {
             ),
             body: Column(
               children: [
-                if (user != null && (user.reminder || user.expired))
+                if (user != null && (user.reminder || user.expired!))
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
                     child: Row(
                       children: [
                         const Icon(
@@ -130,7 +130,7 @@ class _Videos extends State<Videos> {
                         Expanded(
                           child: Html(
                             data:
-                                'Your subscription ${user.expired ? 'has expired' : 'will expire'} on <b>${DateFormater.dateParser(user.expiryDate)}</b>. Please renew your account.',
+                                'Your subscription ${user.expired! ? 'has expired' : 'will expire'} on <b>${DateFormater.dateParser(user.expiryDate!)}</b>. Please renew your account.',
                             style: {
                               'html': Style(
                                 textAlign: TextAlign.left,
@@ -169,9 +169,8 @@ class _Videos extends State<Videos> {
                                           borderRadius:
                                               BorderRadius.circular(5),
                                           image: DecorationImage(
-                                            image: NetworkImage(
-                                                AppUrl.baseURL +
-                                                    video.thumbnail),
+                                            image: NetworkImage(AppUrl.baseURL +
+                                                video.thumbnail),
                                             fit: BoxFit.cover,
                                           ),
                                         ),
@@ -181,14 +180,15 @@ class _Videos extends State<Videos> {
                                         child: Column(
                                           children: [
                                             Expanded(
-                                                flex: 5,
-                                                child: Container()),
+                                                flex: 5, child: Container()),
                                             Expanded(
                                               flex: 4,
                                               child: Container(
                                                   width: double.maxFinite,
-                                                  padding: const EdgeInsets.all(20),
-                                                  decoration: const BoxDecoration(
+                                                  padding:
+                                                      const EdgeInsets.all(20),
+                                                  decoration:
+                                                      const BoxDecoration(
                                                     color: Color.fromARGB(
                                                         160, 0, 0, 0),
                                                   ),
@@ -203,8 +203,7 @@ class _Videos extends State<Videos> {
                                                       Text(video.title,
                                                           style: const TextStyle(
                                                               fontSize: 24,
-                                                              letterSpacing:
-                                                                  1,
+                                                              letterSpacing: 1,
                                                               fontWeight:
                                                                   FontWeight
                                                                       .bold,
@@ -217,14 +216,14 @@ class _Videos extends State<Videos> {
                                                       if (video.description !=
                                                           null)
                                                         Flexible(
-                                                          child: Text(video.description,
+                                                          child: Text(
+                                                              video.description,
                                                               textAlign:
                                                                   TextAlign
                                                                       .center,
                                                               style: const TextStyle(
                                                                   height: 1.4,
-                                                                  fontSize:
-                                                                      14,
+                                                                  fontSize: 14,
                                                                   letterSpacing:
                                                                       1,
                                                                   fontWeight:

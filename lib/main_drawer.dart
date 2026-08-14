@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import './components/nav_items.dart';
 
 class MainDrawer extends StatefulWidget {
-  const MainDrawer({Key key}) : super(key: key);
+  const MainDrawer({Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -17,8 +17,8 @@ class MainDrawer extends StatefulWidget {
 }
 
 class _MainDrawerState extends State<MainDrawer> {
-  User user;
-  bool isAuthenticated;
+  User? user;
+  bool isAuthenticated = false;
 
   @override
   void initState() {
@@ -77,7 +77,7 @@ class _MainDrawerState extends State<MainDrawer> {
                           height: 80,
                           width: 80,
                         ),
-                        Text(user.username ?? "",
+                        Text(user?.username ?? "",
                             style: const TextStyle(fontSize: 17))
                       ],
                     ),

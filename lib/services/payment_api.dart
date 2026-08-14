@@ -6,7 +6,7 @@ import 'package:kutumba/utils/user_preferences.dart';
 
 class PaymentService {
   Future createBill(String gateway, String type) async {
-    String token = await UserPreferences().getToken();
+    String? token = await UserPreferences().getToken();
 
     Map<String, dynamic> result;
     var url = Uri.parse(AppUrl.createBill);
@@ -18,7 +18,7 @@ class PaymentService {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
+        'Authorization': 'Bearer ' + token!
       },
       body: json.encode(data),
     ).then((Response response) async {

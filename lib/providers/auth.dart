@@ -5,27 +5,46 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:kutumba/models/user.dart';
 import 'package:kutumba/services/user_api.dart';
-import 'package:kutumba/utils/user_preferences.dart';
 import 'package:kutumba/utils/app_url.dart';
+import 'package:kutumba/utils/user_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
   bool _isAuthenticated = false;
 
   bool get isAuthenticated => _isAuthenticated;
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  // ---------------------------------------------------------------------------
+  // LOGIN
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> login(
+      String email, String password) async {
     final Map<String, dynamic> loginData = {
-      'log_name': email,
-      'log_pwd': password
+      'log_name': email.trim(),
+      'log_pwd': password,
     };
 
-    var url = Uri.parse(AppUrl.login);
+    try {
+      final Uri url = Uri.parse(AppUrl.login);
 
-    return await post(url, body: json.encode(loginData), headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }).then(onValue).catchError(onError);
+      final Response response = await post(
+        url,
+        body: json.encode(loginData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      return await onValue(response);
+    } catch (e) {
+      return onError(e);
+    }
   }
+
+  // ---------------------------------------------------------------------------
+  // REGISTER
+  // ---------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> register(
       String firstName,
@@ -33,240 +52,468 @@ class AuthProvider with ChangeNotifier {
       String email,
       String password,
       String passwordConfirmation,
-      String referralCode) async {
+      String referralCode,
+      ) async {
     final Map<String, dynamic> registrationData = {
-      'name': firstName,
-      'address': address,
-      'email': email,
+      'name': firstName.trim(),
+      'address': address.trim(),
+      'email': email.trim(),
       'password': password,
       'password_confirmation': passwordConfirmation,
-      'referral_code': referralCode,
+      'referral_code': referralCode.trim(),
     };
 
-    var url = Uri.parse(AppUrl.register);
+    try {
+      final Uri url = Uri.parse(AppUrl.register);
 
-    return await post(url, body: json.encode(registrationData), headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }).then(onValue).catchError(onError);
+      final Response response = await post(
+        url,
+        body: json.encode(registrationData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      return await onValue(response);
+    } catch (e) {
+      return onError(e);
+    }
   }
+
+  // ---------------------------------------------------------------------------
+  // LOGOUT
+  // ---------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> logout() async {
-    Map<String, Object> result;
+    try {
+      final String? token = await UserPreferences().getToken();
 
-    String token = await UserPreferences().getToken();
+      final Uri url = Uri.parse(AppUrl.logout);
 
-    var url = Uri.parse(AppUrl.logout);
-    Response response = await post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-    );
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
+      final Response response = await post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-      await UserService().unsubscribe();
+      Map<String, dynamic> responseData = {};
 
-      UserPreferences().removeUser();
-
-      _isAuthenticated = false;
-      notifyListeners();
-      result = {
-        'status':
-            (responseData['status'] == '1' || responseData['status'] == 1),
-        'message': responseData['message']
-      };
-    } else if (response.statusCode == 402 || response.statusCode == 401) {
-      await UserService().unsubscribe();
-      UserPreferences().removeUser();
-      _isAuthenticated = false;
-      notifyListeners();
-
-      result = {'status': true, 'message': 'Logout Successful'};
-    } else {
-      result = {'status': false, 'message': 'Something went wrong.'};
-    }
-    return result;
-  }
-
-  Future<User> autoLogin() async {
-    User user = await UserPreferences().getUser();
-
-    if (user == null) {
-      return null;
-    }
-
-    // if(user.expiresAt != null && DateTime.now().isAfter(DateTime.parse(user.expiresAt))){
-    //   await logout();
-    //   return null;
-    // }
-
-    Map result = await refresh(user);
-
-    if (result['status']) {
-      user = result['data'];
-      _isAuthenticated = true;
-      notifyListeners();
-    } else {
-      if (result['forceLogout']) {
-        await UserService().unsubscribe();
-        UserPreferences().removeUser();
-        return null;
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = json.decode(response.body);
+        }
+      } catch (_) {
+        responseData = {};
       }
-    }
-
-    return user;
-  }
-
-  Future<Map<String, dynamic>> forgotPassword(String email) async {
-    Map<String, dynamic> result;
-
-    final Map<String, dynamic> data = {
-      'email': email,
-    };
-
-    var url = Uri.parse(AppUrl.forgotPassword);
-
-    return await post(url, body: json.encode(data), headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }).then((Response response) async {
-      final Map<String, dynamic> responseData = json.decode(response.body);
 
       if (response.statusCode == 200) {
-        result = {
-          'status':
-              (responseData['status'] == '1' || responseData['status'] == 1),
-          'message': responseData['message']
+        await _clearSession();
+
+        return {
+          'status': responseData['status'] == '1' ||
+              responseData['status'] == 1 ||
+              responseData['status'] == true,
+          'message':
+          responseData['message'] ?? 'Logout Successful',
         };
-      } else {
-        result = {'status': false, 'message': responseData['message']};
       }
-      return result;
-    }).catchError(onError);
-  }
 
-  Future<Map<String, dynamic>> refresh(User user,
-      {bool allowRefreshToken = true}) async {
-    var url = Uri.parse(AppUrl.refresh);
-    Map<String, Object> result;
+      // Token already expired.
+      if (response.statusCode == 401 ||
+          response.statusCode == 402) {
+        await _clearSession();
 
-    Response response = await get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ' + user.token
-      },
-    );
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
+        return {
+          'status': true,
+          'message': 'Logout Successful',
+        };
+      }
 
-      user.userId = responseData['response']['session_id'];
-      user.username = responseData['response']['username'];
-      user.email = responseData['response']['email'];
-
-      await UserPreferences().saveUser(user);
-
-      result = {
-        'status':
-            (responseData['status'] == '1' || responseData['status'] == 1),
-        'data': user
+      return {
+        'status': false,
+        'message':
+        responseData['message'] ?? 'Something went wrong.',
       };
-    } else if (response.statusCode == 500 ||
-        response.statusCode == 401 ||
-        response.statusCode == 402) {
-      if (allowRefreshToken) {
-        Map statusResult = await refreshToken();
-        if (statusResult['status']) {
-          user.token = statusResult['data'];
-          return await refresh(user, allowRefreshToken: false);
-        }
+    } catch (e) {
+      return {
+        'status': false,
+        'message': 'Something went wrong.',
+        'data': e,
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // AUTO LOGIN
+  // ---------------------------------------------------------------------------
+
+  Future<User?> autoLogin() async {
+    try {
+      User? user = await UserPreferences().getUser();
+
+      if (user == null) {
+        _isAuthenticated = false;
+        return null;
       }
 
-      result = {'status': false, 'forceLogout': true};
-    } else {
-      result = {'status': false, 'forceLogout': false};
+      final Map<String, dynamic> result = await refresh(user);
+
+      if (result['status'] == true) {
+        User refreshedUser = result['data'];
+
+        _isAuthenticated = true;
+        notifyListeners();
+
+        return refreshedUser;
+      }
+
+      if (result['forceLogout'] == true) {
+        await _clearSession();
+      }
+
+      return null;
+    } catch (e) {
+      _isAuthenticated = false;
+      return null;
     }
-    return result;
   }
+
+  // ---------------------------------------------------------------------------
+  // FORGOT PASSWORD
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final Map<String, dynamic> data = {
+      'email': email.trim(),
+    };
+
+    try {
+      final Uri url = Uri.parse(AppUrl.forgotPassword);
+
+      final Response response = await post(
+        url,
+        body: json.encode(data),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      Map<String, dynamic> responseData = {};
+
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = json.decode(response.body);
+        }
+      } catch (_) {}
+
+      if (response.statusCode == 200) {
+        return {
+          'status': responseData['status'] == '1' ||
+              responseData['status'] == 1 ||
+              responseData['status'] == true,
+          'message':
+          responseData['message'] ?? 'Request successful.',
+        };
+      }
+
+      return {
+        'status': false,
+        'message':
+        responseData['message'] ?? 'Something went wrong.',
+      };
+    } catch (e) {
+      return onError(e);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // REFRESH USER SESSION
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> refresh(
+      User user, {
+        bool allowRefreshToken = true,
+      }) async {
+    try {
+      final Uri url = Uri.parse(AppUrl.refresh);
+
+      final Response response = await get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+
+      Map<String, dynamic> responseData = {};
+
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = json.decode(response.body);
+        }
+      } catch (_) {
+        return {
+          'status': false,
+          'forceLogout': true,
+          'message': 'Invalid server response.',
+        };
+      }
+
+      if (response.statusCode == 200) {
+        final responseBody = responseData['response'];
+
+        if (responseBody != null) {
+          user.userId = responseBody['session_id'];
+          user.username = responseBody['username'];
+          user.email = responseBody['email'];
+        }
+
+        await UserPreferences().saveUser(user);
+
+        _isAuthenticated = true;
+        notifyListeners();
+
+        return {
+          'status': responseData['status'] == '1' ||
+              responseData['status'] == 1 ||
+              responseData['status'] == true,
+          'data': user,
+        };
+      }
+
+      // Access token expired.
+      if (response.statusCode == 401 ||
+          response.statusCode == 402 ||
+          response.statusCode == 500) {
+        if (allowRefreshToken) {
+          final Map<String, dynamic> refreshResponse =
+          await refreshToken();
+
+          if (refreshResponse['status'] == true) {
+            final String newToken = refreshResponse['data'];
+
+            user.token = newToken;
+
+            return await refresh(
+              user,
+              allowRefreshToken: false,
+            );
+          }
+        }
+
+        return {
+          'status': false,
+          'forceLogout': true,
+          'message':
+          responseData['message'] ?? 'Session expired.',
+        };
+      }
+
+      return {
+        'status': false,
+        'forceLogout': false,
+        'message':
+        responseData['message'] ?? 'Something went wrong.',
+      };
+    } catch (e) {
+      return {
+        'status': false,
+        'forceLogout': false,
+        'message': 'Something went wrong.',
+        'data': e,
+      };
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // REFRESH TOKEN
+  // ---------------------------------------------------------------------------
 
   Future<Map<String, dynamic>> refreshToken() async {
-    String token = await UserPreferences().getToken();
+    try {
+      final String? token = await UserPreferences().getToken();
 
-    var url = Uri.parse(AppUrl.refreshToken);
-    Map<String, dynamic> result;
+      if (token == null || token.isEmpty) {
+        await _clearSession();
 
-    Response response = await get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-    );
-    final Map<String, dynamic> responseData = json.decode(response.body);
+        return {
+          'status': false,
+          'message': 'Session expired.',
+        };
+      }
 
-    if (response.statusCode == 200) {
-      String newToken = responseData['response']['refresh'];
+      final Uri url = Uri.parse(AppUrl.refreshToken);
 
-      await UserPreferences().saveData('token', newToken);
+      final Response response = await get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-      result = {
-        'status': (responseData['status'] == 200 ||
-            responseData['status'] == '1' ||
-            responseData['status'] == 1),
-        'data': newToken
+      Map<String, dynamic> responseData = {};
+
+      try {
+        if (response.body.isNotEmpty) {
+          responseData = json.decode(response.body);
+        }
+      } catch (_) {
+        await _clearSession();
+
+        return {
+          'status': false,
+          'message': 'Invalid server response.',
+        };
+      }
+
+      if (response.statusCode == 200) {
+        final responseBody = responseData['response'];
+
+        final String? newToken =
+        responseBody != null
+            ? responseBody['refresh']?.toString()
+            : null;
+
+        if (newToken == null || newToken.isEmpty) {
+          return {
+            'status': false,
+            'message': 'Unable to refresh session.',
+          };
+        }
+
+        await UserPreferences().saveData(
+          'token',
+          newToken,
+        );
+
+        return {
+          'status': responseData['status'] == 200 ||
+              responseData['status'] == '200' ||
+              responseData['status'] == '1' ||
+              responseData['status'] == 1 ||
+              responseData['status'] == true,
+          'data': newToken,
+        };
+      }
+
+      await _clearSession();
+
+      return {
+        'status': false,
+        'message':
+        responseData['message'] ?? 'Session expired.',
       };
-    } else {
-      await UserService().unsubscribe();
-      UserPreferences().removeUser();
-      _isAuthenticated = false;
-      notifyListeners();
+    } catch (e) {
+      await _clearSession();
 
-      result = {'status': false, 'message': responseData['message']};
+      return {
+        'status': false,
+        'message': 'Something went wrong.',
+        'data': e,
+      };
     }
-    return result;
   }
 
-  Future<FutureOr> onValue(Response response) async {
-    Map<String, dynamic> result;
-    final Map<String, dynamic> responseData = json.decode(response.body);
+  // ---------------------------------------------------------------------------
+  // COMMON LOGIN / REGISTER RESPONSE
+  // ---------------------------------------------------------------------------
+
+  Future<Map<String, dynamic>> onValue(Response response) async {
+    Map<String, dynamic> responseData = {};
+
+    try {
+      if (response.body.isNotEmpty) {
+        responseData = json.decode(response.body);
+      }
+    } catch (e) {
+      return {
+        'status': false,
+        'message': 'Invalid server response.',
+        'data': e,
+      };
+    }
+
     if (response.statusCode == 200) {
-      var userData = {
-        'id': responseData['response']['session_id'],
-        'username': responseData['response']['username'],
-        'email': responseData['response']['email'],
+      final responseBody = responseData['response'];
+
+      if (responseBody == null) {
+        return {
+          'status': false,
+          'message': 'Invalid server response.',
+        };
+      }
+
+      final Map<String, dynamic> userData = {
+        'id': responseBody['session_id'],
+        'username': responseBody['username'],
+        'email': responseBody['email'],
         'api_token': responseData['api_token'],
         'expires_at': responseData['expires_at'],
       };
 
-      User authUser = User.fromJson(userData);
+      final User authUser = User.fromJson(userData);
 
-      await UserService().subscribe(responseData['api_token']);
+      final String? apiToken =
+      responseData['api_token']?.toString();
+
+      if (apiToken != null && apiToken.isNotEmpty) {
+        await UserService().subscribe(apiToken);
+      }
+
       await UserPreferences().saveUser(authUser);
 
       _isAuthenticated = true;
-
       notifyListeners();
 
-      result = {
-        'status':
-            (responseData['status'] == '1' || responseData['status'] == 1),
-        'message': responseData['message'],
-        'user': authUser
+      return {
+        'status': responseData['status'] == '1' ||
+            responseData['status'] == 1 ||
+            responseData['status'] == true,
+        'message':
+        responseData['message'] ?? 'Successful.',
+        'user': authUser,
       };
-    } else {
-      result = {'status': false, 'message': responseData['message']};
     }
-    return result;
+
+    return {
+      'status': false,
+      'message':
+      responseData['message'] ?? 'Something went wrong.',
+    };
   }
 
-  static onError(error) {
-    // print("the error is $error.detail");
-    return {'status': false, 'message': 'Something went wrong!', 'data': error};
+  // ---------------------------------------------------------------------------
+  // ERROR HANDLER
+  // ---------------------------------------------------------------------------
+
+  static Map<String, dynamic> onError(dynamic error) {
+    return {
+      'status': false,
+      'message': 'Something went wrong!',
+      'data': error,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // CLEAR SESSION
+  // ---------------------------------------------------------------------------
+
+  Future<void> _clearSession() async {
+    try {
+      await UserService().unsubscribe();
+    } catch (_) {}
+
+    await UserPreferences().removeUser();
+
+    _isAuthenticated = false;
+    notifyListeners();
   }
 }

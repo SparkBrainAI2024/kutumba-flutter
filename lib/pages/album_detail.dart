@@ -1,35 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:kutumba/components/header_logo.dart';
 import 'package:kutumba/models/album.dart';
 import 'package:kutumba/utils/app_url.dart';
-import './../components/header_logo.dart';
 
 class AlbumDetail extends StatefulWidget {
-  const AlbumDetail({Key key}) : super(key: key);
+  const AlbumDetail({super.key});
 
   @override
-  State<StatefulWidget> createState() {
-    return _AlbumDetail();
-  }
+  State<AlbumDetail> createState() => _AlbumDetailState();
 }
 
-class _AlbumDetail extends State<AlbumDetail> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
+class _AlbumDetailState extends State<AlbumDetail> {
   @override
   Widget build(BuildContext context) {
-    Map data = ModalRoute.of(context).settings.arguments;
+    final arguments = ModalRoute.of(context)?.settings.arguments;
 
-    final Album album = data['album'];
+    if (arguments == null || arguments is! Map) {
+      return Scaffold(
+        backgroundColor: Colors.black12,
+        appBar: AppBar(
+          backgroundColor: Colors.black12,
+          title: const HeaderLogo(),
+          centerTitle: false,
+        ),
+        body: const Center(
+          child: Text(
+            'Album information not found.',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    final Album album = arguments['album'] as Album;
 
     return Scaffold(
       backgroundColor: Colors.black12,
       appBar: AppBar(
         backgroundColor: Colors.black12,
-        // Here we take the value from the MyAlbumsPage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: const HeaderLogo(),
         centerTitle: false,
       ),
@@ -45,125 +53,80 @@ class _AlbumDetail extends State<AlbumDetail> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(5),
                     image: DecorationImage(
-                      image: NetworkImage(AppUrl.baseURL + album.coverPhoto),
+                      image: NetworkImage(
+                        AppUrl.baseURL + album.coverPhoto,
+                      ),
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 15),
-                    Text(album.name,
-                        style: const TextStyle(
-                            color: Color.fromARGB(255, 175, 175, 175),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w400,
-                            letterSpacing: 5)),
-                    const SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const Expanded(
-                          flex: 2,
-                          child: Text('Artist:',
-                              style: TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(album.artist,
-                              style: const TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const Expanded(
-                          flex: 2,
-                          child: Text('Release Date:',
-                              style: TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(album.releaseDate,
-                              style: const TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const Expanded(
-                          flex: 2,
-                          child: Text('Label:',
-                              style: TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(album.label,
-                              style: const TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                              album.track.length.toString() + ' tracks',
-                              style: const TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(album.totalTime,
-                              style: const TextStyle(
-                                  color: Color.fromARGB(255, 175, 175, 175),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: 4)),
-                        ),
-                      ],
-                    )
-                  ],
+                const SizedBox(height: 15),
+                Text(
+                  album.name,
+                  style: const TextStyle(
+                    color: Color.fromARGB(255, 175, 175, 175),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 5,
+                  ),
+                ),
+                const SizedBox(height: 15),
+                _buildInfoRow(
+                  label: 'Artist:',
+                  value: album.artist,
+                ),
+                const SizedBox(height: 10),
+                _buildInfoRow(
+                  label: 'Release Date:',
+                  value: album.releaseDate,
+                ),
+                const SizedBox(height: 10),
+                _buildInfoRow(
+                  label: 'Label:',
+                  value: album.label,
+                ),
+                const SizedBox(height: 10),
+                _buildInfoRow(
+                  label: '${album.track.length} tracks',
+                  value: album.totalTime,
                 ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required String label,
+    required String value,
+  }) {
+    const textStyle = TextStyle(
+      color: Color.fromARGB(255, 175, 175, 175),
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      letterSpacing: 4,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: textStyle,
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            style: textStyle,
+          ),
+        ),
+      ],
     );
   }
 }

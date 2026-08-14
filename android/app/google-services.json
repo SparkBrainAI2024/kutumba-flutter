@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "187325939086",
+    "project_id": "kutumba8",
+    "storage_bucket": "kutumba8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:187325939086:android:157ae7910bb5a57b77b8df",
+        "android_client_info": {
+          "package_name": "com.kutumba.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1f1k-K7GarH4FGopnvJf3JYPhilE1qXc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
